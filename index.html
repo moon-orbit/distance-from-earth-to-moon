@@ -1,0 +1,99 @@
+
+<script>
+function norm(normv)
+{
+	if(normv > 0)
+		var normr = Math.sqrt(Math.pow(normv % 360,2));
+	else
+		var normr = 360+(normv % 360);
+	return normr
+}
+
+Math.radians = function(degrees) {
+  return degrees * Math.PI / 180;
+};
+ 
+Math.degrees = function(radians) {
+  return radians * 180 / Math.PI;
+};
+
+function dist() {
+
+//get the current UTC time
+var now = new Date();
+var Y = now.getUTCFullYear();
+var m = now.getUTCMonth() + 1;
+var D = now.getUTCDate();
+var he = now.getUTCHours();
+var mi = now.getUTCMinutes();
+var se = now.getUTCSeconds();
+var ml = now.getUTCMilliseconds(); 
+
+//compute d (number of days since the 01/01/2000)
+var H = he + ( mi / 60 ) + ( se / 3600 )+ (ml / 3600000 );
+var G = 1;
+if( Y < 1582 ) G = 0;
+if( Y <= 1582 && m < 10 ) G = 0;
+if( Y <= 1582 && m == 10 && D < 5 ) G = 0;
+var JD = -1 * Math.floor(7 * (Math.floor((m+9)/12)+Y)/4);
+var S = 1;
+if ((m - 9)<0) S=-1;
+var A = Math.abs(m - 9);
+var J1 = Math.floor(Y + S * Math.floor(A / 7));
+J1 = -1 * Math.floor((Math.floor(J1 / 100) + 1) * 3 / 4);
+JD = JD + Math.floor(275 * m / 9) + D + (G * J1);
+JD = JD + 1721027 + 2 * G + 367 * Y - 0.5;
+JD = JD + (H / 24);
+var d = JD -2451543.5;
+
+
+//compute the parameters of the orbit of the moon
+var Moon = {};
+Moon.N = norm(125.1228 - 0.0529538083*d );//Longitude of Ascending Node
+Moon.i = 5.1454//Inclination (deg)
+Moon.w = norm(318.0634 + 0.1643573223 * d );//longitude of perihelion
+Moon.a = 60.2666 ;//mean distance (in AU)
+Moon.e = 0.054900;//eccentricity
+Moon.M = norm(115.3654 + 13.0649929509 * d );//mean anomaly
+
+//compute the complexes parameters of the orbit of the moon
+var E0 = Moon.M + (180.0/3.14159265358979323846) * Moon.e * Math.sin(Math.radians(Moon.M)) * 
+(1 + Moon.e * Math.cos(Math.radians(Moon.M)));
+var E1 = E0 - (E0 - (180.0/Math.PI) * Moon.e * Math.sin(Math.radians(E0)) - Moon.M ) / ( 1 - 
+Moon.e * Math.cos(Math.radians(E0)));
+var E2 = E1 - (E1 - (180.0/Math.PI) * Moon.e * Math.sin(Math.radians(E1)) - Moon.M ) / ( 1 - 
+Moon.e * Math.cos(Math.radians(E1)));
+Moon.E = E2 - (E2 - (180.0/Math.PI) * Moon.e * Math.sin(Math.radians(E2)) - Moon.M ) / ( 1 - 
+Moon.e * Math.cos(Math.radians(E2)));//eccentric anomaly
+Moon.x = Moon.a * (Math.cos(Math.radians(Moon.E)) - Moon.e);//rectangular coordinate
+Moon.y = Moon.a * (Math.sqrt(1.0 - Moon.e*Moon.e) * Math.sin(Math.radians(Moon.E)));//rectangular coordinate
+Moon.r = Math.sqrt( Moon.x * Moon.x + Moon.y * Moon.y );//distance earth - moon
+Moon.L = norm(Moon.N + Moon.w + Moon.M);//mean longitude
+Moon.v = norm(Math.degrees(Math.atan2(Moon.y,Moon.x)));//true anomaly
+
+//distance correction
+var Sun = {};
+Sun.w = norm(282.9404 + 0.0000470935*d);
+Sun.M = norm(356.0470 + 0.9856002585*d);
+Sun.L = norm(Sun.w + Sun.M);
+
+Moon.D = Moon.L - Sun.L;
+Moon.F = Moon.L - Moon.N;
+
+Moon.r = Moon.r - 0.58 * Math.cos(Math.radians(Moon.M) - 2 * Math.radians(Moon.D));
+Moon.r = Moon.r - 0.46 * Math.cos(2*Math.radians(Moon.D));
+
+//Transforms the number into a string
+Moon.kmr = Math.round(Moon.r * 6378.1370*1000)/1000+ "";
+
+if (Moon.kmr.length == 9) Moon.kmr = Moon.kmr + "0";
+if (Moon.kmr.length == 8) Moon.kmr = Moon.kmr + "00";
+if (Moon.kmr.length == 6) Moon.kmr = Moon.kmr + ".000";
+
+//The distance will be placed in a text box with 		id="distance"
+document.getElementById("distance").textContent = Moon.kmr + " Km";
+}
+setInterval(dist, 60);
+</script>
+
+	<p id="distance"></p>
